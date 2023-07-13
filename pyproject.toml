@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "remove"
+version = "0.1.0"
+description = "Remove action"
+authors = ["Bonajo <m.bonajo@fontys.nl>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+prepare-toolbox = "^0.1.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
