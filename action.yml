@@ -1,0 +1,20 @@
+id: "remove"
+name: "Remove files"
+description: "Remove files"
+inputs:
+  input:
+    description: "Files to remove"
+    required: true
+    type: "array"
+    items: "string"
+  force:
+    description: "Force removal"
+    type: boolean
+    default: false
+  recursive:
+    description: "Whether to recursively remove all subdirectories"
+    type: boolean
+    default: false
+runs:
+  using: "python"
+  main: "main.py"
