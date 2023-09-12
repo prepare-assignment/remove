@@ -5,6 +5,9 @@ description = "Remove action"
 authors = ["Bonajo <m.bonajo@fontys.nl>"]
 license = "MIT"
 readme = "README.md"
+packages = [
+    { include = "main.py"} 
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
