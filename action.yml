@@ -3,12 +3,12 @@ name: "Remove files"
 description: "Remove files"
 inputs:
   input:
-    description: "Files to remove"
+    description: "Files (glob) to remove"
     required: true
     type: "array"
     items: "string"
   force:
-    description: "Force removal"
+    description: "Ignore nonexistent files and arguments"
     type: boolean
     default: false
   recursive:
