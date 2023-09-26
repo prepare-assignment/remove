@@ -11,7 +11,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-prepare-toolbox = "0.2.0"
+prepare-toolbox = "0.3.0"
 
 
 [build-system]
