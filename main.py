@@ -17,7 +17,7 @@ def remove() -> None:
         for glob in inputs:
             files = get_matching_files(glob, excluded=None, relative_to=None, recursive=recursive)
             if len(files) == 0 and not force:
-                set_failed(f"{glob} doesn't match any files, set 'force' to ignore")
+                set_failed(f"'{glob}' doesn't match any files, set 'force' to ignore")
             debug(f"Glob: {glob}, matched files: {files}")
             for path in files:
                 if os.path.isdir(path):
