@@ -17,12 +17,12 @@ def remove() -> None:
         for glob in inputs:
             files = get_matching_files(glob, excluded=None, relative_to=None, recursive=recursive)
             if len(files) == 0 and not force:
-                set_failed(f"No files matched for {glob}, but is required")
+                set_failed(f"{glob} doesn't match any files, set 'force' to ignore")
             debug(f"Glob: {glob}, matched files: {files}")
             for path in files:
                 if os.path.isdir(path):
                     if not recursive:
-                        set_failed(f"{path} is a directory and recursive if false")
+                        set_failed(f"Cannot remove '{path}' as it is a directory, set 'recursive' to remove")
                     shutil.rmtree(path)
                 else:
                     os.remove(path)
