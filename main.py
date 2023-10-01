@@ -30,7 +30,7 @@ def remove() -> None:
                 else:
                     os.remove(path)
             all_files.extend(files)
-            set_output("files", all_files)
+        set_output("files", all_files)
     except Exception as e:
         set_failed(e)
 
