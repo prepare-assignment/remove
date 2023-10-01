@@ -1,7 +1,8 @@
 import os.path
 import shutil
+from typing import List
 
-from prepare_toolbox.core import get_input, set_failed, debug
+from prepare_toolbox.core import get_input, set_failed, debug, set_output
 from prepare_toolbox.file import get_matching_files
 
 
@@ -13,6 +14,8 @@ def remove() -> None:
         force = get_input("force")
         # remove directories and their contents recursively
         recursive = get_input("recursive")
+
+        all_files: List[str] = []
 
         for glob in inputs:
             files = get_matching_files(glob, excluded=None, relative_to=None, recursive=recursive)
@@ -26,6 +29,8 @@ def remove() -> None:
                     shutil.rmtree(path)
                 else:
                     os.remove(path)
+            all_files.extend(files)
+            set_output("files", all_files)
     except Exception as e:
         set_failed(e)
 

@@ -15,6 +15,11 @@ inputs:
     description: "Whether to recursively remove all subdirectories"
     type: boolean
     default: false
+outputs:
+  files:
+    description: Matched globs that have been removed
+    type: array
+    items: string
 runs:
   using: "python"
   main: "main.py"
