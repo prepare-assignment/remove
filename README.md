@@ -23,5 +23,21 @@ recursive:
     default: false
 ```
 
-`force` will exit with an error if any of the inputs doesn't match any files/directories.  
-`recursive` will exit with an error if any of the inputs match a directory.
+`force`: if false and an input doesn't match any files, it will fail the action
+`recursive`: if false and an input is a directory, it will fail the action
+
+## Outputs
+
+The following outputs are available.
+
+```yaml
+outputs:
+    files:
+        description: Matched globs that have been removed
+        type: array
+        items: string
+```
+
+`files`: contains an array of all the inputs that have been removed.
+
+* > :warning: If a directory is removed, it will only list the matched directory path, not all sub files/directories.
