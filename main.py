@@ -35,4 +35,5 @@ def remove() -> None:
         set_failed(e)
 
 
-remove()
+if __name__ == "__main__":
+    remove()
