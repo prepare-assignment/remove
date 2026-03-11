@@ -18,6 +18,9 @@ test = [
     "mypy>=1.5.1",
 ]
 
+[tool.hatch.build.targets.wheel]
+include = ["main.py"]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
