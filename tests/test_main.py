@@ -100,3 +100,18 @@ def test_outside_working_directory_is_refused(tmp_path: Path, monkeypatch: pytes
     with pytest.raises(SystemExit):
         remove()
     assert (tmp_path / "outside.txt").exists()
+
+
+@pytest.mark.parametrize("globs", [["out/**"], ["out", "out/**"], ["out/*", "out/sub/*"]])
+def test_directory_and_its_contents(globs: list, project: Path, monkeypatch: pytest.MonkeyPatch,
+                                    mocker: MockerFixture) -> None:
+    """A directory was removed first, then removing its contents failed with 'No such file or directory'"""
+    set_inputs(monkeypatch, input=globs, recursive=True)
+    set_output = mocker.patch("prepare_remove.main.set_output")
+    failed = mocker.patch("prepare_remove.main.set_failed")
+    remove()
+    failed.assert_not_called()
+    assert not (project / "out" / "sub").exists()
+    assert not (project / "out" / "c.txt").exists()
+    assert (project / "a.txt").exists()
+    set_output.assert_called_once()
