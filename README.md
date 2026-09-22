@@ -18,7 +18,12 @@ force:
   type: boolean
   default: false
 recursive:
-  description: "Whether to recursively remove all subdirectories"  type: boolean
+  description: "Whether to recursively remove all subdirectories"
+  type: boolean
+  default: false
+include-hidden:
+  description: "Also match hidden files and directories (starting with a '.') with wildcards such as '*' and '**'"
+  type: boolean
   default: false
 ```
 
