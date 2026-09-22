@@ -1,79 +1,102 @@
-import prepare_toolbox.core
+import json
+from pathlib import Path
+from typing import Any, Dict
+
 import pytest
+import yaml
+from pytest_mock import MockerFixture
 
 import prepare_remove.main as main
 from prepare_remove.main import remove
-from pytest_mock import MockerFixture
+
+TASK = Path(__file__).parent.parent / "task.yml"
 
 
-def test_no_globs(mocker: MockerFixture):
-    def __get_input(key: str):
-        if key == "input":
-            return []
-        return False
-    mocker.patch('prepare_remove.main.get_input', side_effect=__get_input)
-    spy = mocker.spy(main, "set_output")
+def set_inputs(monkeypatch: pytest.MonkeyPatch, **inputs: Any) -> None:
+    """
+    Pass the inputs like prepare-assignment core does: as JSON in PREPARE_<NAME> environment variables,
+    including the defaults from task.yml. Use the names from task.yml, with '_' for '-'.
+    """
+    definition: Dict[str, Any] = yaml.safe_load(TASK.read_text(encoding="utf-8"))["inputs"]
+    values = {name: spec["default"] for name, spec in definition.items() if "default" in spec}
+    values.update({key.replace("_", "-"): value for key, value in inputs.items()})
+    for key, value in values.items():
+        if value is not None:
+            monkeypatch.setenv(f"PREPARE_{key.upper()}", json.dumps(value))
+
+
+@pytest.fixture
+def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """
+    project
+    |- a.txt
+    |- b.log
+    |- out
+    |  |- c.txt
+    |  |- sub
+    |     |- d.txt
+    """
+    (tmp_path / "out" / "sub").mkdir(parents=True)
+    for file in ["a.txt", "b.log", "out/c.txt", "out/sub/d.txt"]:
+        (tmp_path / file).write_text(file)
+    monkeypatch.chdir(tmp_path)
+    return tmp_path
+
+
+def test_remove_files(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, input=["*.txt", "*.log"])
+    set_output = mocker.patch("prepare_remove.main.set_output")
     remove()
-    spy.assert_called_once_with("files", [])
+    assert not (project / "a.txt").exists()
+    assert not (project / "b.log").exists()
+    assert (project / "out" / "c.txt").exists()
+    set_output.assert_called_once_with("files", ["a.txt", "b.log"])
 
 
-def test_no_force(mocker: MockerFixture):
-    def __get_input(key: str):
-        if key == "input":
-            return ["test"]
-        return False
-    mocker.patch('prepare_remove.main.get_input', side_effect=__get_input)
-    mocker.patch("prepare_remove.main.get_matching_files", return_value=[])
-    spy = mocker.spy(main, "set_failed")
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        remove()
-    spy.assert_called_once()
-    assert 'force' in spy.call_args.args[0]
-
-
-def test_no_recursive(mocker: MockerFixture):
-    def __get_input(key: str):
-        if key == "input":
-            return ["test"]
-        return False
-    mocker.patch('prepare_remove.main.get_input', side_effect=__get_input)
-    mocker.patch("prepare_remove.main.get_matching_files", return_value=["file"])
-    mocker.patch("os.path.isdir", return_value=True)
-    spy = mocker.spy(main, "set_failed")
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
-        remove()
-    spy.assert_called_once()
-    assert 'recursive' in spy.call_args.args[0]
-
-
-def test_successful(mocker: MockerFixture):
-    def __get_input(key: str):
-        if key == "input":
-            return ["test"]
-        return True
-
-    def __is_dir(path: str):
-        return True if path == "dir" else False
-    mocker.patch('prepare_remove.main.get_input', side_effect=__get_input)
-    mocker.patch("prepare_remove.main.get_matching_files", return_value=["file", "dir"])
-    mocker.patch("os.path.isdir", side_effect=__is_dir)
-    mocked_rmtree = mocker.patch("shutil.rmtree")
-    mocked_remove = mocker.patch("os.remove")
-    spy = mocker.spy(main, "set_output")
-
+def test_remove_directory_recursive(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, input=["out"], recursive=True)
+    set_output = mocker.patch("prepare_remove.main.set_output")
     remove()
+    assert not (project / "out").exists()
+    assert (project / "a.txt").exists()
+    set_output.assert_called_once_with("files", ["out"])
 
-    mocked_rmtree.assert_called_once()
-    mocked_remove.assert_called_once()
-    spy.assert_called_once_with("files", ["file", "dir"])
 
-
-def test_exception(mocker: MockerFixture):
-    def __get_input(key: str):
-        raise Exception("Test")
-    mocker.patch('prepare_remove.main.get_input', side_effect=__get_input)
-    spy = mocker.spy(main, "set_failed")
-    with pytest.raises(SystemExit) as pytest_wrapped_e:
+def test_directory_without_recursive_fails(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    set_inputs(monkeypatch, input=["out"])
+    with pytest.raises(SystemExit):
         remove()
-    spy.assert_called_once()
-    assert 'Test' in str(spy.call_args.args[0])
+    assert (project / "out" / "sub" / "d.txt").exists()
+
+
+def test_no_match_fails(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, input=["missing.txt"])
+    failed = mocker.spy(main, "set_failed")
+    with pytest.raises(SystemExit):
+        remove()
+    assert "'missing.txt' doesn't match any files, set 'force' to ignore" in failed.call_args.args[0]
+
+
+def test_no_match_with_force(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, input=["missing.txt", "a.txt"], force=True)
+    set_output = mocker.patch("prepare_remove.main.set_output")
+    remove()
+    assert not (project / "a.txt").exists()
+    set_output.assert_called_once_with("files", ["a.txt"])
+
+
+def test_no_globs(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, input=[])
+    set_output = mocker.patch("prepare_remove.main.set_output")
+    remove()
+    set_output.assert_called_once_with("files", [])
+
+
+def test_outside_working_directory_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (tmp_path / "project").mkdir()
+    (tmp_path / "outside.txt").write_text("keep")
+    set_inputs(monkeypatch, input=["../outside.txt"], force=True)
+    monkeypatch.chdir(tmp_path / "project")
+    with pytest.raises(SystemExit):
+        remove()
+    assert (tmp_path / "outside.txt").exists()
