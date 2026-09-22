@@ -115,3 +115,61 @@ def test_directory_and_its_contents(globs: list, project: Path, monkeypatch: pyt
     assert not (project / "out" / "c.txt").exists()
     assert (project / "a.txt").exists()
     set_output.assert_called_once()
+
+
+def symlink(link: Path, target: str) -> None:
+    try:
+        link.symlink_to(target)
+    except OSError:  # pragma: no cover
+        pytest.skip("Creating symbolic links is not allowed (Windows without developer mode)")
+
+
+@pytest.fixture
+def linked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """
+    tmp_path
+    |- outside
+    |  |- secret.txt
+    |- project
+       |- out
+          |- a.txt
+          |- dir-link -> ../../outside
+          |- file-link -> ../../outside/secret.txt
+    """
+    (tmp_path / "outside").mkdir()
+    (tmp_path / "outside" / "secret.txt").write_text("keep")
+    out = tmp_path / "project" / "out"
+    out.mkdir(parents=True)
+    (out / "a.txt").write_text("a")
+    symlink(out / "dir-link", "../../outside")
+    symlink(out / "file-link", "../../outside/secret.txt")
+    monkeypatch.chdir(tmp_path / "project")
+    return tmp_path
+
+
+@pytest.mark.parametrize("recursive", [True, False])
+@pytest.mark.parametrize("link", ["out/dir-link", "out/file-link"])
+def test_symlink_is_removed_not_its_target(link: str, recursive: bool, linked: Path,
+                                           monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    """A symbolic link to a directory failed with '[Errno None] None'"""
+    set_inputs(monkeypatch, input=[link], recursive=recursive)
+    set_output = mocker.patch("prepare_remove.main.set_output")
+    failed = mocker.patch("prepare_remove.main.set_failed")
+    remove()
+    failed.assert_not_called()
+    assert not (linked / "project" / link).is_symlink()
+    assert (linked / "outside" / "secret.txt").read_text() == "keep"
+    set_output.assert_called_once_with("files", [link])
+
+
+@pytest.mark.parametrize("glob", ["out/**/*.txt", "out/dir-link/*", "out/**"])
+def test_files_behind_symlink_are_not_removed(glob: str, linked: Path, monkeypatch: pytest.MonkeyPatch,
+                                              mocker: MockerFixture) -> None:
+    """Globs followed a symbolic link and removed its target's files, even outside the working directory"""
+    set_inputs(monkeypatch, input=[glob], recursive=True, force=True)
+    set_output = mocker.patch("prepare_remove.main.set_output")
+    failed = mocker.patch("prepare_remove.main.set_failed")
+    remove()
+    failed.assert_not_called()
+    assert (linked / "outside" / "secret.txt").read_text() == "keep"
+    assert not any("dir-link/" in file for file in set_output.call_args.args[1])
