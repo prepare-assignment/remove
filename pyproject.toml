@@ -17,6 +17,7 @@ test = [
     "pytest-cov>=4.1.0",
     "mypy>=1.5.1",
     "packaging>=24.0",
+    "pyyaml>=6.0",
 ]
 
 [tool.hatch.build.targets.wheel]
