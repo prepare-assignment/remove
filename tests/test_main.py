@@ -120,9 +120,11 @@ def test_directory_and_its_contents(globs: list, project: Path, monkeypatch: pyt
     set_output.assert_called_once()
 
 
-def symlink(link: Path, target: str) -> None:
+def symlink(link: Path, target: str, directory: bool = False) -> None:
     try:
-        link.symlink_to(target)
+        # On Windows a link to a directory is only a directory link with target_is_directory, and the target
+        # has to use the platform separator to be resolved
+        link.symlink_to(target.replace("/", os.sep), target_is_directory=directory)
     except OSError:  # pragma: no cover
         pytest.skip("Creating symbolic links is not allowed (Windows without developer mode)")
 
@@ -144,8 +146,10 @@ def linked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     out = tmp_path / "project" / "out"
     out.mkdir(parents=True)
     (out / "a.txt").write_text("a")
-    symlink(out / "dir-link", "../../outside")
+    symlink(out / "dir-link", "../../outside", directory=True)
     symlink(out / "file-link", "../../outside/secret.txt")
+    # Without this the globs through the link would silently match nothing (e.g. a file link on Windows)
+    assert (out / "dir-link" / "secret.txt").is_file()
     monkeypatch.chdir(tmp_path / "project")
     return tmp_path
 
