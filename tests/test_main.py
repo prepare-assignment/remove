@@ -47,7 +47,7 @@ def project(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 
 def test_remove_files(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
-    set_inputs(monkeypatch, input=["*.txt", "*.log"])
+    set_inputs(monkeypatch, inputs=["*.txt", "*.log"])
     set_output = mocker.patch("prepare_remove.main.set_output")
     remove()
     assert not (project / "a.txt").exists()
@@ -57,7 +57,7 @@ def test_remove_files(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: Mo
 
 
 def test_remove_directory_recursive(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
-    set_inputs(monkeypatch, input=["out"], recursive=True)
+    set_inputs(monkeypatch, inputs=["out"], recursive=True)
     set_output = mocker.patch("prepare_remove.main.set_output")
     remove()
     assert not (project / "out").exists()
@@ -66,14 +66,14 @@ def test_remove_directory_recursive(project: Path, monkeypatch: pytest.MonkeyPat
 
 
 def test_directory_without_recursive_fails(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    set_inputs(monkeypatch, input=["out"])
+    set_inputs(monkeypatch, inputs=["out"])
     with pytest.raises(SystemExit):
         remove()
     assert (project / "out" / "sub" / "d.txt").exists()
 
 
 def test_no_match_fails(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
-    set_inputs(monkeypatch, input=["missing.txt"])
+    set_inputs(monkeypatch, inputs=["missing.txt"])
     failed = mocker.spy(main, "set_failed")
     with pytest.raises(SystemExit):
         remove()
@@ -81,7 +81,7 @@ def test_no_match_fails(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: 
 
 
 def test_no_match_with_force(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
-    set_inputs(monkeypatch, input=["missing.txt", "a.txt"], force=True)
+    set_inputs(monkeypatch, inputs=["missing.txt", "a.txt"], force=True)
     set_output = mocker.patch("prepare_remove.main.set_output")
     remove()
     assert not (project / "a.txt").exists()
@@ -89,7 +89,7 @@ def test_no_match_with_force(project: Path, monkeypatch: pytest.MonkeyPatch, moc
 
 
 def test_no_globs(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
-    set_inputs(monkeypatch, input=[])
+    set_inputs(monkeypatch, inputs=[])
     set_output = mocker.patch("prepare_remove.main.set_output")
     remove()
     set_output.assert_called_once_with("files", [])
@@ -98,7 +98,7 @@ def test_no_globs(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: Mocker
 def test_outside_working_directory_is_refused(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     (tmp_path / "project").mkdir()
     (tmp_path / "outside.txt").write_text("keep")
-    set_inputs(monkeypatch, input=["../outside.txt"], force=True)
+    set_inputs(monkeypatch, inputs=["../outside.txt"], force=True)
     monkeypatch.chdir(tmp_path / "project")
     with pytest.raises(SystemExit):
         remove()
@@ -109,7 +109,7 @@ def test_outside_working_directory_is_refused(tmp_path: Path, monkeypatch: pytes
 def test_directory_and_its_contents(globs: list, project: Path, monkeypatch: pytest.MonkeyPatch,
                                     mocker: MockerFixture) -> None:
     """A directory was removed first, then removing its contents failed with 'No such file or directory'"""
-    set_inputs(monkeypatch, input=globs, recursive=True)
+    set_inputs(monkeypatch, inputs=globs, recursive=True)
     set_output = mocker.patch("prepare_remove.main.set_output")
     failed = mocker.patch("prepare_remove.main.set_failed")
     remove()
@@ -155,7 +155,7 @@ def linked(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 def test_symlink_is_removed_not_its_target(link: str, recursive: bool, linked: Path,
                                            monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
     """A symbolic link to a directory failed with '[Errno None] None'"""
-    set_inputs(monkeypatch, input=[link], recursive=recursive)
+    set_inputs(monkeypatch, inputs=[link], recursive=recursive)
     set_output = mocker.patch("prepare_remove.main.set_output")
     failed = mocker.patch("prepare_remove.main.set_failed")
     remove()
@@ -169,7 +169,7 @@ def test_symlink_is_removed_not_its_target(link: str, recursive: bool, linked: P
 def test_files_behind_symlink_are_not_removed(glob: str, linked: Path, monkeypatch: pytest.MonkeyPatch,
                                               mocker: MockerFixture) -> None:
     """Globs followed a symbolic link and removed its target's files, even outside the working directory"""
-    set_inputs(monkeypatch, input=[glob], recursive=True, force=True)
+    set_inputs(monkeypatch, inputs=[glob], recursive=True, force=True)
     set_output = mocker.patch("prepare_remove.main.set_output")
     failed = mocker.patch("prepare_remove.main.set_failed")
     remove()
@@ -193,7 +193,7 @@ def read_only(project: Path) -> Iterator[Path]:
 def test_directory_with_read_only_files(read_only: Path, monkeypatch: pytest.MonkeyPatch,
                                         mocker: MockerFixture) -> None:
     """Failed with 'Permission denied' on Windows, e.g. for a directory with a git repository"""
-    set_inputs(monkeypatch, input=["repo"], recursive=True)
+    set_inputs(monkeypatch, inputs=["repo"], recursive=True)
     mocker.patch("prepare_remove.main.set_output")
     failed = mocker.patch("prepare_remove.main.set_failed")
     remove()
@@ -203,7 +203,7 @@ def test_directory_with_read_only_files(read_only: Path, monkeypatch: pytest.Mon
 
 def test_read_only_file(read_only: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
     """Failed with 'Permission denied' on Windows"""
-    set_inputs(monkeypatch, input=["locked.txt"])
+    set_inputs(monkeypatch, inputs=["locked.txt"])
     mocker.patch("prepare_remove.main.set_output")
     failed = mocker.patch("prepare_remove.main.set_failed")
     remove()
@@ -221,7 +221,7 @@ def test_read_only_directory_is_not_changed(project: Path, monkeypatch: pytest.M
     (protected / "file.txt").write_text("x")
     os.chmod(protected, stat.S_IREAD | stat.S_IEXEC)
     try:
-        set_inputs(monkeypatch, input=["protected/file.txt"])
+        set_inputs(monkeypatch, inputs=["protected/file.txt"])
         failed = mocker.patch("prepare_remove.main.set_failed")
         remove()
         failed.assert_called_once()
@@ -250,7 +250,7 @@ def windows_read_only(mocker: MockerFixture) -> None:
 @pytest.mark.parametrize("glob, removed", [(["repo"], "repo"), (["locked.txt"], "locked.txt")])
 def test_read_only_files_simulated_windows(glob: list, removed: str, read_only: Path, windows_read_only: None,
                                            monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
-    set_inputs(monkeypatch, input=glob, recursive=True)
+    set_inputs(monkeypatch, inputs=glob, recursive=True)
     mocker.patch("prepare_remove.main.set_output")
     failed = mocker.patch("prepare_remove.main.set_failed")
     remove()
@@ -261,7 +261,7 @@ def test_read_only_files_simulated_windows(glob: list, removed: str, read_only: 
 def test_nothing_removed_when_a_directory_is_not_allowed(project: Path, monkeypatch: pytest.MonkeyPatch,
                                                           mocker: MockerFixture) -> None:
     """Without recursive, a matched directory failed the task, but only after earlier files were removed"""
-    set_inputs(monkeypatch, input=["a.txt", "b.log", "out"])
+    set_inputs(monkeypatch, inputs=["a.txt", "b.log", "out"])
     failed = mocker.spy(main, "set_failed")
     with pytest.raises(SystemExit):
         remove()
@@ -272,7 +272,7 @@ def test_nothing_removed_when_a_directory_is_not_allowed(project: Path, monkeypa
 
 
 def test_nothing_removed_when_a_glob_does_not_match(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    set_inputs(monkeypatch, input=["a.txt", "missing.txt"])
+    set_inputs(monkeypatch, inputs=["a.txt", "missing.txt"])
     with pytest.raises(SystemExit):
         remove()
     assert (project / "a.txt").exists()
@@ -288,15 +288,51 @@ def hidden(project: Path) -> Path:
 
 def test_hidden_files_not_removed_by_default(hidden: Path, monkeypatch: pytest.MonkeyPatch,
                                              mocker: MockerFixture) -> None:
-    set_inputs(monkeypatch, input=["out/*"], recursive=True)
+    set_inputs(monkeypatch, inputs=["out/*"], recursive=True)
     mocker.patch("prepare_remove.main.set_output")
     remove()
     assert sorted(path.name for path in (hidden / "out").iterdir()) == [".cache", ".gitignore"]
 
 
 def test_include_hidden(hidden: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
-    set_inputs(monkeypatch, input=["out/*"], recursive=True, include_hidden=True)
+    set_inputs(monkeypatch, inputs=["out/*"], recursive=True, include_hidden=True)
     set_output = mocker.patch("prepare_remove.main.set_output")
     remove()
     assert list((hidden / "out").iterdir()) == []
     set_output.assert_called_once_with("files", ["out/.cache", "out/.gitignore", "out/c.txt", "out/sub"])
+
+
+def test_inputs(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, inputs=["*.txt"])
+    set_output = mocker.patch("prepare_remove.main.set_output")
+    warning = mocker.patch("prepare_remove.main.warning")
+    remove()
+    assert not (project / "a.txt").exists()
+    warning.assert_not_called()
+    set_output.assert_called_once_with("files", ["a.txt"])
+
+
+def test_deprecated_input_still_works(project: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, input=["*.txt"])
+    mocker.patch("prepare_remove.main.set_output")
+    warning = mocker.patch("prepare_remove.main.warning")
+    remove()
+    assert not (project / "a.txt").exists()
+    warning.assert_called_once_with("The input 'input' is deprecated, use 'inputs' instead")
+
+
+def test_input_and_inputs_fails(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    set_inputs(monkeypatch, input=["a.txt"], inputs=["b.log"])
+    with pytest.raises(SystemExit):
+        remove()
+    assert (project / "a.txt").exists()
+    assert (project / "b.log").exists()
+
+
+def test_neither_input_nor_inputs_fails(project: Path, monkeypatch: pytest.MonkeyPatch,
+                                        mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch)
+    failed = mocker.spy(main, "set_failed")
+    with pytest.raises(SystemExit):
+        remove()
+    assert "'inputs' is required" in str(failed.call_args.args[0])

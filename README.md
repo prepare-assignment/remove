@@ -5,12 +5,15 @@ For more information see the [man page](https://man7.org/linux/man-pages/man1/rm
 
 ## Options
 
-The following options are available:
+The following options are available. One of `inputs` or the deprecated `input` is required (not both); `input` still works, but logs a warning.
 
 ```yaml
+inputs:
+  description: "Files and directories (globs) to remove"
+  type: "array"
+  items: "string"
 input:
-  description: "Files (glob) to remove"
-  required: true
+  description: "Deprecated, use 'inputs'"
   type: "array"
   items: "string"
 force:

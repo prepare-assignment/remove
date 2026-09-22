@@ -5,7 +5,7 @@ import sys
 from pathlib import PurePosixPath
 from typing import Any, Callable, Set
 
-from prepare_toolbox.core import get_input, set_failed, debug, set_output
+from prepare_toolbox.core import get_input, set_failed, debug, set_output, warning
 from prepare_toolbox.file import get_matching_files
 
 
@@ -43,8 +43,16 @@ def __behind_symlink(path: PurePosixPath) -> bool:
 
 def remove() -> None:
     try:
-        # glob(s) to match
-        inputs = get_input("input")
+        # glob(s) to match, 'input' is the deprecated name
+        inputs = get_input("inputs")
+        deprecated_input = get_input("input")
+        if inputs is not None and deprecated_input is not None:
+            set_failed("Use either 'inputs' or the deprecated 'input', not both")
+        if inputs is None:
+            if deprecated_input is None:
+                set_failed("The input 'inputs' is required")
+            warning("The input 'input' is deprecated, use 'inputs' instead")
+            inputs = deprecated_input
         # ignore nonexistent files and arguments
         force = get_input("force")
         # remove directories and their contents recursively

@@ -2,9 +2,12 @@ id: "remove"
 name: "Remove files"
 description: "Remove files"
 inputs:
+  inputs:
+    description: "Files and directories (globs) to remove"
+    type: "array"
+    items: "string"
   input:
-    description: "Files (glob) to remove"
-    required: true
+    description: "Deprecated, use 'inputs'"
     type: "array"
     items: "string"
   force:
