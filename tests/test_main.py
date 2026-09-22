@@ -256,3 +256,23 @@ def test_read_only_files_simulated_windows(glob: list, removed: str, read_only: 
     remove()
     failed.assert_not_called()
     assert not (read_only / removed).exists()
+
+
+def test_nothing_removed_when_a_directory_is_not_allowed(project: Path, monkeypatch: pytest.MonkeyPatch,
+                                                          mocker: MockerFixture) -> None:
+    """Without recursive, a matched directory failed the task, but only after earlier files were removed"""
+    set_inputs(monkeypatch, input=["a.txt", "b.log", "out"])
+    failed = mocker.spy(main, "set_failed")
+    with pytest.raises(SystemExit):
+        remove()
+    assert "Cannot remove 'out' as it is a directory, set 'recursive' to remove" in failed.call_args.args[0]
+    assert (project / "a.txt").exists()
+    assert (project / "b.log").exists()
+    assert (project / "out" / "c.txt").exists()
+
+
+def test_nothing_removed_when_a_glob_does_not_match(project: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    set_inputs(monkeypatch, input=["a.txt", "missing.txt"])
+    with pytest.raises(SystemExit):
+        remove()
+    assert (project / "a.txt").exists()

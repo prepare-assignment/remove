@@ -66,6 +66,11 @@ def remove() -> None:
                 matched.discard(path)
         # Sorted: a deterministic output, and a directory comes before its contents
         all_files = sorted(matched)
+        # Check everything before removing anything, so a failing task doesn't leave half of the files removed
+        if not recursive:
+            for path in all_files:
+                if os.path.isdir(path) and not os.path.islink(path):
+                    set_failed(f"Cannot remove '{path}' as it is a directory, set 'recursive' to remove")
 
         removed: Set[PurePosixPath] = set()
         for path in all_files:
@@ -77,8 +82,6 @@ def remove() -> None:
                 # The link itself (to a file or directory), its target is not touched
                 os.unlink(path)
             elif os.path.isdir(path):
-                if not recursive:
-                    set_failed(f"Cannot remove '{path}' as it is a directory, set 'recursive' to remove")
                 if sys.version_info >= (3, 12):
                     shutil.rmtree(path, onexc=__retry_read_only_file)
                 else:
