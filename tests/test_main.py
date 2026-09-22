@@ -276,3 +276,27 @@ def test_nothing_removed_when_a_glob_does_not_match(project: Path, monkeypatch: 
     with pytest.raises(SystemExit):
         remove()
     assert (project / "a.txt").exists()
+
+
+@pytest.fixture
+def hidden(project: Path) -> Path:
+    (project / "out" / ".gitignore").write_text("x")
+    (project / "out" / ".cache").mkdir()
+    (project / "out" / ".cache" / "state").write_text("x")
+    return project
+
+
+def test_hidden_files_not_removed_by_default(hidden: Path, monkeypatch: pytest.MonkeyPatch,
+                                             mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, input=["out/*"], recursive=True)
+    mocker.patch("prepare_remove.main.set_output")
+    remove()
+    assert sorted(path.name for path in (hidden / "out").iterdir()) == [".cache", ".gitignore"]
+
+
+def test_include_hidden(hidden: Path, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
+    set_inputs(monkeypatch, input=["out/*"], recursive=True, include_hidden=True)
+    set_output = mocker.patch("prepare_remove.main.set_output")
+    remove()
+    assert list((hidden / "out").iterdir()) == []
+    set_output.assert_called_once_with("files", ["out/.cache", "out/.gitignore", "out/c.txt", "out/sub"])

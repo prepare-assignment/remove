@@ -49,12 +49,15 @@ def remove() -> None:
         force = get_input("force")
         # remove directories and their contents recursively
         recursive = get_input("recursive")
+        # also match hidden files and directories with wildcards
+        include_hidden = get_input("include-hidden")
 
         # First match all globs, before anything is removed: a glob can match a directory and (another glob)
         # its contents, e.g. 'out' and 'out/**'
         matched: Set[str] = set()
         for glob in inputs:
-            files = get_matching_files(glob, excluded=None, relative_to=None, recursive=recursive)
+            files = get_matching_files(glob, excluded=None, relative_to=None, recursive=recursive,
+                                       include_hidden=bool(include_hidden))
             if len(files) == 0 and not force:
                 set_failed(f"'{glob}' doesn't match any files, set 'force' to ignore")
             debug(f"Glob: {glob}, matched files: {files}")
