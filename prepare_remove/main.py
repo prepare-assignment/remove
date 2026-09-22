@@ -1,10 +1,36 @@
 import os
 import shutil
+import stat
+import sys
 from pathlib import PurePosixPath
-from typing import Set
+from typing import Any, Callable, Set
 
 from prepare_toolbox.core import get_input, set_failed, debug, set_output
 from prepare_toolbox.file import get_matching_files
+
+
+def __clear_read_only(path: str) -> None:
+    """
+    Make a file writable. On Windows a read-only file (e.g. the object files of a git repository) cannot be removed,
+    on Linux and macOS it can. Directory permissions are never changed.
+    """
+    os.chmod(path, os.stat(path).st_mode | stat.S_IWRITE)
+
+
+def __retry_read_only_file(function: Callable[[str], Any], path: str, error: Any) -> None:
+    """Error handler for shutil.rmtree: retry removing a read-only file, other errors are raised"""
+    if os.path.isdir(path) and not os.path.islink(path):
+        raise error if isinstance(error, BaseException) else error[1]
+    __clear_read_only(path)
+    function(path)
+
+
+def __remove_file(path: str) -> None:
+    try:
+        os.remove(path)
+    except PermissionError:
+        __clear_read_only(path)
+        os.remove(path)
 
 
 def __behind_symlink(path: PurePosixPath) -> bool:
@@ -53,9 +79,12 @@ def remove() -> None:
             elif os.path.isdir(path):
                 if not recursive:
                     set_failed(f"Cannot remove '{path}' as it is a directory, set 'recursive' to remove")
-                shutil.rmtree(path)
+                if sys.version_info >= (3, 12):
+                    shutil.rmtree(path, onexc=__retry_read_only_file)
+                else:
+                    shutil.rmtree(path, onerror=__retry_read_only_file)
             else:
-                os.remove(path)
+                __remove_file(path)
             removed.add(posix)
         set_output("files", all_files)
     except Exception as e:
