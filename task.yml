@@ -22,4 +22,4 @@ outputs:
     items: string
 runs:
   using: "python"
-  main: "main.py"
+  main: "prepare_remove/main.py"

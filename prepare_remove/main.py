@@ -8,7 +8,6 @@ from prepare_toolbox.file import get_matching_files
 
 def remove() -> None:
     try:
-        os.path.isfile("")
         # glob(s) to match
         inputs = get_input("input")
         # ignore nonexistent files and arguments
