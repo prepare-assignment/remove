@@ -7,6 +7,14 @@ from prepare_toolbox.core import get_input, set_failed, debug, set_output
 from prepare_toolbox.file import get_matching_files
 
 
+def __behind_symlink(path: PurePosixPath) -> bool:
+    """
+    Whether the path is inside a symbolic link to a directory (e.g. 'out/link/file' with 'out/link -> ../..').
+    Removing it would remove a file of the link's target, which can be outside the working directory.
+    """
+    return any(os.path.islink(parent) for parent in path.parents if parent != PurePosixPath("."))
+
+
 def remove() -> None:
     try:
         # glob(s) to match
@@ -25,6 +33,11 @@ def remove() -> None:
                 set_failed(f"'{glob}' doesn't match any files, set 'force' to ignore")
             debug(f"Glob: {glob}, matched files: {files}")
             matched.update(files)
+        # Never follow symbolic links: only a link itself is removed, not what it points to
+        for path in sorted(matched):
+            if __behind_symlink(PurePosixPath(path)):
+                debug(f"Skipping '{path}', it is inside a symbolic link")
+                matched.discard(path)
         # Sorted: a deterministic output, and a directory comes before its contents
         all_files = sorted(matched)
 
@@ -34,7 +47,10 @@ def remove() -> None:
             posix = PurePosixPath(path)
             if posix in removed or any(parent in removed for parent in posix.parents):
                 continue
-            if os.path.isdir(path):
+            if os.path.islink(path):
+                # The link itself (to a file or directory), its target is not touched
+                os.unlink(path)
+            elif os.path.isdir(path):
                 if not recursive:
                     set_failed(f"Cannot remove '{path}' as it is a directory, set 'recursive' to remove")
                 shutil.rmtree(path)
